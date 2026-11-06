@@ -1,0 +1,69 @@
+{
+  "title": "Warsaw Transit",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Warsaw Transit",
+        "description": "Configure exactly two bus routes. Lines are discovered automatically. Departure times are timetable times, not GPS arrival estimates.",
+        "data": {
+          "api_key": "Warsaw Open Data API key",
+          "route_1_name": "Route 1: name (lowercase letters, digits, underscores)",
+          "route_1_start_stop": "Route 1: start stop name",
+          "route_1_end_stop": "Route 1: destination stop name",
+          "route_1_start_post": "Route 1: start post (optional)",
+          "route_1_end_post": "Route 1: destination post (optional)",
+          "route_2_name": "Route 2: name (lowercase letters, digits, underscores)",
+          "route_2_start_stop": "Route 2: start stop name",
+          "route_2_end_stop": "Route 2: destination stop name",
+          "route_2_start_post": "Route 2: start post (optional)",
+          "route_2_end_post": "Route 2: destination post (optional)"
+        }
+      },
+      "reconfigure": {
+        "title": "Warsaw Transit",
+        "description": "Configure exactly two bus routes. Lines are discovered automatically. Departure times are timetable times, not GPS arrival estimates.",
+        "data": {
+          "api_key": "Warsaw Open Data API key",
+          "route_1_name": "Route 1: name (lowercase letters, digits, underscores)",
+          "route_1_start_stop": "Route 1: start stop name",
+          "route_1_end_stop": "Route 1: destination stop name",
+          "route_1_start_post": "Route 1: start post (optional)",
+          "route_1_end_post": "Route 1: destination post (optional)",
+          "route_2_name": "Route 2: name (lowercase letters, digits, underscores)",
+          "route_2_start_stop": "Route 2: start stop name",
+          "route_2_end_stop": "Route 2: destination stop name",
+          "route_2_start_post": "Route 2: start post (optional)",
+          "route_2_end_post": "Route 2: destination post (optional)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Warsaw Transit",
+        "description": "Configure exactly two bus routes. Lines are discovered automatically. Departure times are timetable times, not GPS arrival estimates.",
+        "data": {
+          "api_key": "Warsaw Open Data API key",
+          "route_1_name": "Route 1: name (lowercase letters, digits, underscores)",
+          "route_1_start_stop": "Route 1: start stop name",
+          "route_1_end_stop": "Route 1: destination stop name",
+          "route_1_start_post": "Route 1: start post (optional)",
+          "route_1_end_post": "Route 1: destination post (optional)",
+          "route_2_name": "Route 2: name (lowercase letters, digits, underscores)",
+          "route_2_start_stop": "Route 2: start stop name",
+          "route_2_end_stop": "Route 2: destination stop name",
+          "route_2_start_post": "Route 2: start post (optional)",
+          "route_2_end_post": "Route 2: destination post (optional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The API key was rejected. Generate a current Warsaw Open Data key and try again.",
+      "invalid_routes": "{detail}",
+      "invalid_stops": "{detail}",
+      "cooldown": "Warsaw API is rate limiting requests. Wait before submitting again.",
+      "cannot_connect": "Cannot reach Warsaw Open Data. Check network connectivity and try again."
+    },
+    "abort": {
+      "reconfigure_successful": "Configuration updated.",
+      "reauth_successful": "API key updated."
+    }
+  }
+}

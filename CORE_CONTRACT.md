@@ -1,0 +1,14 @@
+# Core contract
+`api.TransitClient(session, key)` uses an externally owned aiohttp ClientSession and raw JWT. Methods: `stops()`, `lines(stop)`, `timetable(stop,line)`, `gps()`. `WarsawAPI` aliases TransitClient. All requests share one client lock, minimum 0.2s spacing, 20s timeout, no immediate retries. Errors: `TransitError`, `AuthError`, `CooldownError(retry_after)` in api; `ConfigurationError` imported there from models. Cooldown starts at 30s, doubles to 900s; auth minimum 900s; Retry-After honored even above cap.
+
+`models.RouteConfig` is Pydantic2: name,start_stop,end_stop,start_post=None,end_post=None. Strict strings, trim whitespace, forbid extra fields, reject identical stop names. Other models are stdlib dataclasses: Stop(group,post,name,lat,lon), Departure(time,brigade,direction='',trip=''), Vehicle(line,brigade,vehicle_id,lat,lon,time).
+
+`engine.TransitEngine(client,routes)`; `await async_setup()` requires exactly two differently named routes. Setup resolves exact names (case-insensitive), requires explicit origin post when ambiguous, selects destination post ONLY when exactly one supports shared line plus forward same-brigade timetable with compatible headsign/trasa; otherwise raises ConfigurationError with choices. No hardcoded line or vehicle. `await async_refresh(now=None)` reloads schedules/GPS, raises API/config errors. Optional now must be aware datetime.
+
+Result is JSON-serializable dict keyed by route.name. Each value: `{schedule:[{departure:ISO8601,line,brigade,headsign}] or null,gps:{vehicle_id,line,brigade,latitude,longitude,distance_km,gps_updated:ISO8601,direction,distance_type,certainty} or null,status:'approaching'|'unknown',error:null,start_post,end_post,lines}`. Schedule contains exactly two entries or null when fewer than two; independent of GPS. GPS picks nearest confidently approaching candidate, never an arrival ETA. Unknown is normal on first poll, stale/repeated samples, opposite side of stop, curved routes outside conservative corridor, uncertain timetable matching.
+
+GPS conservatism: same line/brigade across fresh samples (<=120s), 5–120s movement, >=40m closer, >=100m from origin, <=5km range, <=126km/h, unique forward brigade schedule within next 20min; both points upstream of origin within 200m corridor opposite destination vector. This intentionally rejects valid curved approaches; route geometry/trip identity would improve coverage. Schedule match max origin-destination travel 90min. No date parameter exists in timetable endpoint: extended >=24h clocks map to previous service date during 00:00–03:59; do not synthesize tomorrow's timetable. Nonexistent DST clocks and repeated ambiguous clocks are withheld.
+
+Verified official line action from dataset UUID 8eb065b6-f3a0-41d4-a842-732c6c1c3063 call_examples: `get_ztm_lista_linii_na_przystanku`.
+
+Tests: `.venv/bin/python -m unittest discover -s tests -p test_core.py -v`. No live credential accessed; parent verifies live API.

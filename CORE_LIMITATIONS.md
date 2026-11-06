@@ -1,0 +1,17 @@
+# Core safety and caching
+
+Timetables are cached per stop/line, shared between setup and refreshes, for 15 minutes. A Warsaw calendar-date change invalidates the cache immediately because the API has no service-date parameter. Empty valid responses are cached too. API errors are not cached. GPS polling does not invalidate timetables. Schedule results preserve one or two available future departures; no departures yields null.
+
+Partial stop/GPS feeds skip malformed rows and log only the invalid row count, never payloads. `invalid_stop_count` and `invalid_gps_count` expose counts from the latest parsed feed. A nonempty feed with no usable rows fails through the existing API cooldown path rather than pretending it is an empty valid feed.
+
+## GPS candidates are estimates, not verified direction
+
+The closest candidate is selected by haversine distance to the boarding stop. Its line and brigade must match exactly one forward timetable departure from 10 minutes ago through 30 minutes ahead. Recently scheduled late departures are eligible only with the same motion evidence required for future departures. This does not alter the next-two future scheduled departures.
+
+Both successive observations must be no more than 120 seconds old and not future-dated. Their distinct timestamps must be 5–120 seconds apart, the line/brigade must remain unchanged, distance must decrease by at least 15 metres, observed displacement must imply less than 130 km/h, and current distance must be below 10 km. Missing, unchanged, reversed, stale, implausible, wrong-duty, or ambiguously scheduled observations produce no candidate. Multiple eligible trips for one line/brigade are rejected. Samples are shared across both routes. No endpoint straight-vector or corridor assumption is used.
+
+Candidates expose `status: approaching_candidate`, GPS `direction: approaching_candidate`, GPS `certainty: estimated_schedule_and_motion`, `uncertainty_reason: direction_estimated_without_trip_id`, and an explicit GPS warning that direction is not guaranteed without a trip feed. No candidate returns `gps: null`, `status: unknown`, and `uncertainty_reason: no_unambiguous_fresh_schedule_and_motion_candidate`. Unknown does not mean no bus is coming. Sensor attributes carry uncertainty and suppress stale candidate details after failed refreshes.
+
+The feed lacks GPS trip IDs and ordered upstream stop events. Same-line/brigade duties repeat in opposite directions, and a passed or opposite-direction bus may move closer again on a curved route. Increasing distance rejects the current sample, but cannot prove that every bus moving closer has not already passed. A forward timetable match and radial motion are useful estimates only. In particular, a route can initially travel north while the destination is southwest. Verified direction requires journey-linked upstream stop evidence or a trip feed; fetching every stop timetable during GPS refresh would impose unsafe API load. No GPS ETA or guaranteed approach is provided.
+
+Forward timetable matching retains same-brigade, compatible headsign and variant checks plus a 90-minute bound and intervening-origin exclusion. Shortened trips with changed headsign/variant can be omitted; this is deliberate rather than joining an unrelated later journey. The API's missing service-date selector also limits overnight certainty; extended-hour handling remains a bounded heuristic, not historical service retrieval.

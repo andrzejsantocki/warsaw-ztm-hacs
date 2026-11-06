@@ -1,0 +1,4 @@
+[
+  {"name":"home_to_work","start_stop":"Dworzec Wileński","start_post":"01","end_stop":"Centrum","end_post":"02"},
+  {"name":"work_to_home","start_stop":"Centrum","start_post":"03","end_stop":"Dworzec Wileński","end_post":"02"}
+]

@@ -1,0 +1,18 @@
+{
+  "domain": "warsaw_transit",
+  "name": "Warsaw Transit",
+  "codeowners": [
+    "@andrzejsantocki"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "http"
+  ],
+  "documentation": "https://github.com/andrzejsantocki/warsaw-ztm-hacs",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/andrzejsantocki/warsaw-ztm-hacs/issues",
+  "requirements": [
+    "pydantic==2.10.6"
+  ],
+  "version": "0.1.0"
+}
