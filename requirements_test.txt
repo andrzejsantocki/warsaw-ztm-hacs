@@ -1,4 +1,4 @@
-homeassistant==2025.1.4
+homeassistant==2026.10.4
 pydantic==2.10.6
 pytest
 pytest-asyncio
