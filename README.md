@@ -4,7 +4,7 @@ Home Assistant custom integration with two configurable, named bus journeys. No 
 
 ## Status
 
-Version 0.1.0 development build, installable via HACS as a custom repository. Verified against Home Assistant 2025.1.4 / Python 3.12: 42 tests and 17 subtests passed (9 third-party warnings). Real HA HTTP authentication tests cover 401, 200, 404 and stale-cache 503 responses. Live Warsaw API checks returned both routes' schedules and estimated GPS candidates. GPS direction remains heuristic, not guaranteed.
+Version 0.1.1 development build, installable via HACS as a custom repository. Verified against Home Assistant 2025.1.4 / Python 3.12: 42 tests and 17 subtests passed (9 third-party warnings). Real HA HTTP authentication tests cover 401, 200, 404 and stale-cache 503 responses. Live Warsaw API checks returned both routes' schedules and estimated GPS candidates. GPS direction remains heuristic, not guaranteed.
 
 ## Installation
 
