@@ -1,6 +1,7 @@
 """Cached departure timestamps and nearest approaching vehicle."""
 from datetime import datetime
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 
@@ -8,6 +9,7 @@ from .const import DOMAIN
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(TransitSensor(coordinator, entry.entry_id, route["name"], kind) for route in entry.data["routes"] for kind in ("next_1", "next_2", "approaching_bus", "line"))
+    async_add_entities([LastErrorSensor(coordinator, entry.entry_id)])
 
 
 class TransitSensor(CoordinatorEntity, SensorEntity):
@@ -81,3 +83,35 @@ class TransitSensor(CoordinatorEntity, SensorEntity):
             return {"line": first["line"], "source": "schedule", "vehicle_id": None, "brigade": first.get("brigade"),
                     "headsign": first.get("headsign"), "departure": first.get("departure")}
         return {"line": None, "source": None, "vehicle_id": None}
+
+
+class LastErrorSensor(CoordinatorEntity, SensorEntity):
+    """Time of the latest failed update; details and traceback in attributes."""
+
+    _attr_has_entity_name = True
+    _attr_name = "last error"
+    _attr_icon = "mdi:alert-circle-outline"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _unrecorded_attributes = frozenset({"traceback"})
+
+    def __init__(self, coordinator, entry_id):
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry_id}_last_error"
+        self._attr_device_info = {"identifiers": {(DOMAIN, entry_id)}, "name": "Warsaw Transit", "manufacturer": "City of Warsaw"}
+
+    @property
+    def available(self):
+        return True
+
+    @property
+    def native_value(self):
+        error = getattr(self.coordinator, "last_error", None)
+        return error["time"] if error else None
+
+    @property
+    def extra_state_attributes(self):
+        error = getattr(self.coordinator, "last_error", None) or {}
+        return {"error_type": error.get("error_type"), "message": error.get("message"),
+                "traceback": error.get("traceback"), "error_count": getattr(self.coordinator, "error_count", 0),
+                "currently_failing": not self.coordinator.last_update_success}

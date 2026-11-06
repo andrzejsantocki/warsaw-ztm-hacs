@@ -4,7 +4,7 @@ Home Assistant custom integration with two configurable, named bus journeys. No 
 
 ## Status
 
-Version 0.1.2 development build, installable via HACS as a custom repository. Verified against Home Assistant 2025.1.4 / Python 3.12: 42 tests and 17 subtests passed (9 third-party warnings). Real HA HTTP authentication tests cover 401, 200, 404 and stale-cache 503 responses. Live Warsaw API checks returned both routes' schedules and estimated GPS candidates. GPS direction remains heuristic, not guaranteed.
+Version 0.1.3 development build, installable via HACS as a custom repository. Verified against Home Assistant 2025.1.4 / Python 3.12: 42 tests and 17 subtests passed (9 third-party warnings). Real HA HTTP authentication tests cover 401, 200, 404 and stale-cache 503 responses. Live Warsaw API checks returned both routes' schedules and estimated GPS candidates. GPS direction remains heuristic, not guaranteed.
 
 ## Installation
 
@@ -36,7 +36,7 @@ Both metro stop names have multiple posts. The integration reports ambiguous nam
 
 ## Sensors
 
-Each route creates two scheduled-departure timestamp sensors (`next_1`, `next_2`) and an approaching-vehicle sensor. A `line` sensor shows the approaching bus's line (attributes `vehicle_id`, `brigade`, `source: gps`), falling back to the next scheduled departure's line (`source: schedule`) when no bus is tracked. GPS attributes include vehicle ID, line, brigade, latitude, longitude, last report time and `distance_km`.
+Each route creates two scheduled-departure timestamp sensors (`next_1`, `next_2`) and an approaching-vehicle sensor. A `line` sensor shows the approaching bus's line (attributes `vehicle_id`, `brigade`, `source: gps`), falling back to the next scheduled departure's line (`source: schedule`) when no bus is tracked. A diagnostic `last error` sensor holds the time of the latest failed update, with `error_type`, `message`, `traceback` (API key redacted, not stored by the recorder), `error_count` and `currently_failing` attributes. It resets on restart. GPS attributes include vehicle ID, line, brigade, latitude, longitude, last report time and `distance_km`.
 
 Distance is haversine great-circle distance from bus to origin stop. No maps, geocoding service or routing dependency is used. Timetable departure is **not** a GPS ETA.
 

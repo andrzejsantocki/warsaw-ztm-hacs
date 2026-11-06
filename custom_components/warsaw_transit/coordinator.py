@@ -1,6 +1,7 @@
 """One shared polling coordinator per entry."""
 from datetime import datetime, timedelta, timezone
 import logging
+import traceback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -8,6 +9,8 @@ from .api import TransitClient, TransitError, AuthError, CooldownError, Configur
 from .engine import TransitEngine
 from .models import RouteConfig
 from .const import DOMAIN, UPDATE_SECONDS
+
+MAX_TRACEBACK = 8000
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,8 +24,30 @@ class TransitCoordinator(DataUpdateCoordinator):
         self._initialized = False
         self._configuration_error = None
         self.last_success = None
+        self.last_error = None
+        self.error_count = 0
 
     async def _async_update_data(self):
+        try:
+            return await self._async_fetch()
+        except Exception as err:
+            self._record_error(err)
+            raise
+
+    def _redact(self, text):
+        return text.replace(self._api_key, "[redacted]") if self._api_key else text
+
+    def _record_error(self, err):
+        """Keep the latest failure (with its cause chain) for the diagnostic sensor."""
+        self.error_count += 1
+        self.last_error = {
+            "time": datetime.now(timezone.utc),
+            "error_type": type(err).__name__,
+            "message": self._redact(str(err)),
+            "traceback": self._redact("".join(traceback.format_exception(err)))[-MAX_TRACEBACK:],
+        }
+
+    async def _async_fetch(self):
         if self._configuration_error is not None:
             raise ConfigEntryError(self._configuration_error)
         try:
