@@ -70,7 +70,9 @@ class APITests(unittest.IsolatedAsyncioTestCase):
         api = WarsawAPI(session, 'test')
         with self.assertRaises(APIError) as caught: await api.stops()
         self.assertGreaterEqual(caught.exception.retry_after,120)
-        with self.assertRaises(CooldownError): await api.gps()
+        self.assertIn('HTTP 429', str(caught.exception))
+        with self.assertRaises(CooldownError) as cooldown: await api.gps()
+        self.assertRegex(str(cooldown.exception), r's left \(after .*HTTP 429\)')
         self.assertEqual(len(session.calls), 1)
         bad = WarsawAPI(Session(Response({'bad':'data'})), 'test')
         with self.assertRaises(APIError): await bad.stops()
@@ -112,6 +114,31 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
     def routes(self):
         from custom_components.warsaw_transit.models import RouteConfig
         return [RouteConfig(name='home_to_work',start_stop='A',end_stop='B'), RouteConfig(name='work_to_home',start_stop='A',end_stop='B')]
+
+    async def test_gps_failure_keeps_schedule(self):
+        from custom_components.warsaw_transit.engine import TransitEngine, WARSAW
+        from custom_components.warsaw_transit.api import CooldownError
+        api = FakeAPI()
+        async def failing_gps(): raise CooldownError('Warsaw API cooldown active, 25s left (after gps: HTTP 500)', 25)
+        api.gps = failing_gps
+        engine = TransitEngine(api, self.routes())
+        await engine.async_setup()
+        r = (await engine.async_refresh(datetime(2026,11,6,9,0,tzinfo=WARSAW)))['home_to_work']
+        self.assertEqual([d['departure_local'] for d in r['schedule']], ['09:10','09:30'])
+        self.assertIsNone(r['gps'])
+        self.assertEqual(r['uncertainty_reason'], 'gps_unavailable')
+        self.assertIn('HTTP 500', r['error'])
+
+    async def test_gps_auth_failure_still_raises(self):
+        from custom_components.warsaw_transit.engine import TransitEngine, WARSAW
+        from custom_components.warsaw_transit.api import AuthError
+        api = FakeAPI()
+        async def failing_gps(): raise AuthError('rejected', 900)
+        api.gps = failing_gps
+        engine = TransitEngine(api, self.routes())
+        await engine.async_setup()
+        with self.assertRaises(AuthError):
+            await engine.async_refresh(datetime(2026,11,6,9,0,tzinfo=WARSAW))
 
     async def test_forward_post_and_next_two_json(self):
         from custom_components.warsaw_transit.engine import TransitEngine, WARSAW

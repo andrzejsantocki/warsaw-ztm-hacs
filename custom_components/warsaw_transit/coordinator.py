@@ -64,6 +64,6 @@ class TransitCoordinator(DataUpdateCoordinator):
             self.update_interval = None
             raise ConfigEntryError(self._configuration_error) from None
         except CooldownError as err:
-            raise UpdateFailed("Warsaw API cooldown active. Automatic polling will resume when allowed.") from err
+            raise UpdateFailed(f"{err}. Polling resumes automatically.") from err
         except (TransitError, TimeoutError, OSError) as err:
-            raise UpdateFailed("Warsaw API unavailable. Check connectivity; the integration will retry automatically.") from err
+            raise UpdateFailed(f"Warsaw API unavailable ({err}). The integration will retry automatically.") from err

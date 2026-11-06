@@ -54,6 +54,7 @@ class TransitClient:
         self._lock = asyncio.Lock()
         self._failures, self._blocked_until = 0, 0.0
         self._last_request = 0.0
+        self.last_failure = None
         self.invalid_stop_count = 0
         self.invalid_gps_count = 0
 
@@ -61,7 +62,7 @@ class TransitClient:
         async with self._lock:
             now = time.monotonic()
             if now < self._blocked_until:
-                raise CooldownError('Warsaw API cooldown active', self._blocked_until-now)
+                raise CooldownError(f'Warsaw API cooldown active, {self._blocked_until-now:.0f}s left (after {self.last_failure})', self._blocked_until-now)
             # Serialize and space calls, including calls from concurrent refreshes.
             await asyncio.sleep(max(0, 0.2 - (now-self._last_request)))
             kwargs = {'headers': {'Authorization': self._key}, 'timeout': ClientTimeout(total=20)}
@@ -83,13 +84,24 @@ class TransitClient:
                             except (ValueError, TypeError, OverflowError): pass
                         raise TransitError(f'Warsaw API HTTP {response.status}')
                     result = parse(await response.json(content_type=None))
-            except (TransitError, ClientError, asyncio.TimeoutError, ValueError, TypeError, KeyError, OverflowError):
+            except (TransitError, ClientError, asyncio.TimeoutError, ValueError, TypeError, KeyError, OverflowError) as err:
                 self._failures += 1
                 delay = max(min(900, 30 * 2**min(self._failures-1, 5)), retry, 900 if auth else 0)
                 self._blocked_until = time.monotonic()+delay
                 error = AuthError if auth else TransitError
-                # Never include upstream payloads or credentials in exceptions.
-                raise error('Warsaw API authorization failed; check the raw JWT key' if auth else 'Warsaw API request failed or returned an invalid payload', delay) from None
+                # Never include upstream payloads or credentials in exceptions: only our own
+                # messages (HTTP status, parse checks) or the exception type.
+                if isinstance(err, TransitError):
+                    reason = str(err)
+                elif isinstance(err, asyncio.TimeoutError):
+                    reason = 'request timed out'
+                elif isinstance(err, ValueError) and not isinstance(err, ClientError):
+                    reason = f'invalid payload ({err})'[:200]
+                else:
+                    reason = type(err).__name__
+                self.last_failure = f'{action}: {reason}'
+                message = 'Warsaw API authorization failed; check the raw JWT key' if auth else f'Warsaw API request failed: {self.last_failure}'
+                raise error(f'{message}; retrying in {delay:.0f}s', delay) from None
             self._failures = 0
             return result
 

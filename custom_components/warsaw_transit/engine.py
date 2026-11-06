@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 import asyncio
 import math
 import time
+from .api import AuthError, TransitError
 from .const import MAX_ROUTES
 from .models import ConfigurationError, RouteConfig
 
@@ -127,7 +128,14 @@ class TransitEngine:
             result = {}
             async def table(stop,line):
                 return await self._table(stop, line, now)
-            vehicles = await self.client.gps()
+            # GPS is a bonus: when it fails, keep publishing timetable departures.
+            gps_error = None
+            try:
+                vehicles = await self.client.gps()
+            except AuthError:
+                raise
+            except TransitError as err:
+                vehicles, gps_error = [], str(err)
             for route,start,end,lines in self._resolved:
                 events = []
                 candidate_events = []
@@ -181,7 +189,8 @@ class TransitEngine:
                 gps = min(candidates, key=lambda v:v['distance_km']) if candidates else None
                 result[route.name] = {'schedule':events[:2] or None, 'gps':gps,
                                       'status':'approaching_candidate' if gps else 'unknown',
-                                      'uncertainty_reason':'direction_estimated_without_trip_id' if gps else 'no_unambiguous_fresh_schedule_and_motion_candidate',
-                                      'error':None, 'start_post':start.post, 'end_post':end.post, 'lines':lines}
-            self._previous = {v.vehicle_id:v for v in vehicles if 0 <= now.timestamp()-v.time.timestamp() <= 120}
+                                      'uncertainty_reason':'direction_estimated_without_trip_id' if gps else ('gps_unavailable' if gps_error else 'no_unambiguous_fresh_schedule_and_motion_candidate'),
+                                      'error':gps_error, 'start_post':start.post, 'end_post':end.post, 'lines':lines}
+            if gps_error is None:
+                self._previous = {v.vehicle_id:v for v in vehicles if 0 <= now.timestamp()-v.time.timestamp() <= 120}
             return result

@@ -124,6 +124,7 @@ curl -H "Authorization: Bearer $HA_TOKEN" \
 | "No forward shared routes" | No direct bus runs between those stops in that direction today. Check names and posts. |
 | API key rejected | Generate a new key and use **Reconfigure**. |
 | Sensors `unavailable` | See the attributes of `sensor.warsaw_transit_last_error`. |
+| "Warsaw API cooldown active, Ns left (after …)" | A request failed (the text after *after* says which and why), so the integration pauses 30 s–15 min before retrying. Short API hiccups are normal and recover on their own. If only GPS fails, departures keep updating and `approaching_bus` shows `unknown` with `uncertainty_reason: gps_unavailable`. |
 
 ## Development
 
