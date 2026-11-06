@@ -7,3 +7,5 @@ routes.json
 .venv/
 *venv*/
 warsaw-transit-hacs/
+coverage.xml
+.coverage

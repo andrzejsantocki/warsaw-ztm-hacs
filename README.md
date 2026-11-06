@@ -1,9 +1,13 @@
 # Warsaw ZTM Bus Commute
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
-[![GitHub release](https://img.shields.io/github/v/release/andrzejsantocki/warsaw-ztm-hacs)](https://github.com/andrzejsantocki/warsaw-ztm-hacs/releases)
+[![Tests](https://github.com/andrzejsantocki/warsaw-ztm-hacs/actions/workflows/tests.yml/badge.svg)](https://github.com/andrzejsantocki/warsaw-ztm-hacs/actions/workflows/tests.yml)
 [![Validate](https://github.com/andrzejsantocki/warsaw-ztm-hacs/actions/workflows/validate.yml/badge.svg)](https://github.com/andrzejsantocki/warsaw-ztm-hacs/actions/workflows/validate.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Codecov](https://codecov.io/gh/andrzejsantocki/warsaw-ztm-hacs/graph/badge.svg)](https://codecov.io/gh/andrzejsantocki/warsaw-ztm-hacs)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/andrzejsantocki/warsaw-ztm-hacs/badge)](https://securityscorecards.dev/viewer/?uri=github.com/andrzejsantocki/warsaw-ztm-hacs)
+[![GitHub release](https://img.shields.io/github/v/release/andrzejsantocki/warsaw-ztm-hacs?color=066fd1)](https://github.com/andrzejsantocki/warsaw-ztm-hacs/releases)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
+![Home Assistant 2025.1+](https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=homeassistant&logoColor=white)
+[![License: MIT](https://img.shields.io/github/license/andrzejsantocki/warsaw-ztm-hacs)](LICENSE)
 
 Home Assistant integration for your daily Warsaw bus journeys. It shows the next timetable departures and the live position of the bus that is approaching your stop, using the official [Warsaw Open Data](https://dane.um.warszawa.pl) API.
 
@@ -129,6 +133,7 @@ curl -H "Authorization: Bearer $HA_TOKEN" \
 ## Development
 
 ```bash
+pip install -r requirements_test.txt
 python -m pytest tests -q -o asyncio_default_fixture_loop_scope=function
 ```
 
