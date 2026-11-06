@@ -1,6 +1,6 @@
 {
   "domain": "warsaw_transit",
-  "name": "Warsaw Transit",
+  "name": "Warsaw ZTM Bus Commute",
   "codeowners": [
     "@andrzejsantocki"
   ],

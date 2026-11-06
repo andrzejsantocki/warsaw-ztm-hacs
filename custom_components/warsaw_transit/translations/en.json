@@ -1,9 +1,9 @@
 {
-  "title": "Warsaw Transit",
+  "title": "Warsaw ZTM Bus Commute",
   "config": {
     "step": {
       "user": {
-        "title": "Warsaw Transit",
+        "title": "Warsaw ZTM Bus Commute",
         "description": "Configure exactly two bus routes. Lines are discovered automatically. Departure times are timetable times, not GPS arrival estimates.",
         "data": {
           "api_key": "Warsaw Open Data API key",
@@ -20,7 +20,7 @@
         }
       },
       "reconfigure": {
-        "title": "Warsaw Transit",
+        "title": "Warsaw ZTM Bus Commute",
         "description": "Configure exactly two bus routes. Lines are discovered automatically. Departure times are timetable times, not GPS arrival estimates.",
         "data": {
           "api_key": "Warsaw Open Data API key",
@@ -37,7 +37,7 @@
         }
       },
       "reauth_confirm": {
-        "title": "Warsaw Transit",
+        "title": "Warsaw ZTM Bus Commute",
         "description": "Configure exactly two bus routes. Lines are discovered automatically. Departure times are timetable times, not GPS arrival estimates.",
         "data": {
           "api_key": "Warsaw Open Data API key",

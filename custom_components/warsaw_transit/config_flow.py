@@ -86,7 +86,7 @@ class WarsawTransitConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 if entry:
                     return self.async_update_reload_and_abort(entry, data_updates=data)
-                return self.async_create_entry(title="Warsaw Transit", data=data)
+                return self.async_create_entry(title="Warsaw ZTM Bus Commute", data=data)
         if user_input is not None:
             key = user_input.get("api_key", "").strip()
             if key:

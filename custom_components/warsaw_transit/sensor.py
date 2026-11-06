@@ -21,7 +21,7 @@ class TransitSensor(CoordinatorEntity, SensorEntity):
         self.kind = kind
         self._attr_unique_id = f"{entry_id}_{route}_{kind}"
         self._attr_name = f"{route.replace('_', ' ')} {kind.replace('_', ' ')}"
-        self._attr_device_info = {"identifiers": {(DOMAIN, entry_id)}, "name": "Warsaw Transit", "manufacturer": "City of Warsaw"}
+        self._attr_device_info = {"identifiers": {(DOMAIN, entry_id)}, "name": "Warsaw ZTM Bus Commute", "manufacturer": "City of Warsaw"}
         if kind.startswith("next_"):
             self._attr_device_class = SensorDeviceClass.TIMESTAMP
         elif kind == "line":
@@ -99,7 +99,7 @@ class LastErrorSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, entry_id):
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry_id}_last_error"
-        self._attr_device_info = {"identifiers": {(DOMAIN, entry_id)}, "name": "Warsaw Transit", "manufacturer": "City of Warsaw"}
+        self._attr_device_info = {"identifiers": {(DOMAIN, entry_id)}, "name": "Warsaw ZTM Bus Commute", "manufacturer": "City of Warsaw"}
 
     @property
     def available(self):

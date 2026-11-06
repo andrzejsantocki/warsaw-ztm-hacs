@@ -1,4 +1,4 @@
-# Warsaw Transit Routes
+# Warsaw ZTM Bus Commute
 
 Home Assistant custom integration with two configurable, named bus journeys. No bus line or vehicle is hardcoded. Discover lines shared by the configured stop posts and use forward timetable matches.
 
@@ -11,8 +11,8 @@ Version 0.1.4 development build, installable via HACS as a custom repository. Ve
 ### HACS (recommended)
 
 1. HACS → ⋮ → Custom repositories → add `https://github.com/andrzejsantocki/warsaw-ztm-hacs`, type **Integration**.
-2. Search for **Warsaw Transit Routes** in HACS and download it.
-3. Restart Home Assistant, then Settings → Devices & services → Add integration → Warsaw Transit.
+2. Search for **Warsaw ZTM Bus Commute** in HACS and download it.
+3. Restart Home Assistant, then Settings → Devices & services → Add integration → Warsaw ZTM Bus Commute.
 
 ### Manual
 
