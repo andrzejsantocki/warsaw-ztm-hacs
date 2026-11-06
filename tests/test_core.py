@@ -56,7 +56,7 @@ class APITests(unittest.IsolatedAsyncioTestCase):
         good = {'Lines':'120','Brigade':'1','VehicleNumber':'V','Lat':52,'Lon':21,'Time':'2026-11-06 08:00:00'}
         malformed = [None, {}, dict(good, Lat=None), dict(good, Time='bad'), dict(good, Lon='nan')]
         api = WarsawAPI(Session(Response({'result':malformed + [good]}), Response([]), Response([{}])), 'test')
-        with self.assertLogs('custom_components.warsaw_transit.api', level='WARNING'):
+        with self.assertLogs('custom_components.warsaw_transit.api', level='DEBUG'):
             self.assertEqual([v.vehicle_id for v in await api.gps()], ['V'])
         self.assertEqual(api.invalid_gps_count, len(malformed))
         self.assertEqual(await api.gps(), [])

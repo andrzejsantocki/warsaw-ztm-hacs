@@ -8,7 +8,7 @@ from .const import DOMAIN
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(TransitSensor(coordinator, entry.entry_id, route["name"], kind) for route in entry.data["routes"] for kind in ("next_1", "next_2", "approaching_bus", "line"))
+    async_add_entities(TransitSensor(coordinator, entry.entry_id, route["name"], kind) for route in entry.data["routes"] for kind in ("next_1", "next_2", "departures", "approaching_bus", "line"))
     async_add_entities([LastErrorSensor(coordinator, entry.entry_id)])
 
 
@@ -26,6 +26,8 @@ class TransitSensor(CoordinatorEntity, SensorEntity):
             self._attr_device_class = SensorDeviceClass.TIMESTAMP
         elif kind == "line":
             self._attr_icon = "mdi:bus-marker"
+        elif kind == "departures":
+            self._attr_icon = "mdi:bus-clock"
         else:
             self._attr_icon = "mdi:bus"
 
@@ -38,6 +40,11 @@ class TransitSensor(CoordinatorEntity, SensorEntity):
             return (data.get("gps") or {}).get("vehicle_id")
         if self.kind == "line":
             return self._line(data).get("line")
+        if self.kind == "departures":
+            # Plain Warsaw clock times: readable by voice assistants and LLMs,
+            # unlike timestamp states, which HA always exposes in UTC.
+            times = [d.get("departure_local") for d in (data.get("schedule") or [])[:2] if d.get("departure_local")]
+            return ", ".join(times) or None
         schedule = (data.get("schedule") or [])
         index = int(self.kind[-1]) - 1
         if len(schedule) <= index:
@@ -64,6 +71,10 @@ class TransitSensor(CoordinatorEntity, SensorEntity):
             attributes.update(data.get("gps") or {})
         elif self.kind == "line":
             attributes.update(self._line(data))
+        elif self.kind == "departures":
+            schedule = (data.get("schedule") or [])[:2]
+            attributes.update({"lines": [d.get("line") for d in schedule], "headsigns": [d.get("headsign") for d in schedule],
+                               "timezone": "Europe/Warsaw"})
         else:
             schedule = (data.get("schedule") or [])
             index = int(self.kind[-1]) - 1

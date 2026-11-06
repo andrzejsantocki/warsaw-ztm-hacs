@@ -162,7 +162,9 @@ class TransitClient:
                 except (ValueError, TypeError, KeyError, OverflowError):
                     self.invalid_gps_count += 1
             if self.invalid_gps_count:
-                _LOGGER.warning('Skipped %d unusable GPS rows', self.invalid_gps_count)
+                # The live feed routinely has a bad row or two; warn only when nothing is usable.
+                level = logging.WARNING if not result else logging.DEBUG
+                _LOGGER.log(level, 'Skipped %d unusable GPS rows', self.invalid_gps_count)
             if rows and not result:
                 raise ValueError('No usable GPS rows')
             return result

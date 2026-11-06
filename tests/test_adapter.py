@@ -72,3 +72,16 @@ async def test_http_is_authenticated_and_only_reads_cache():
     coordinator.async_refresh.assert_not_called()
     with pytest.raises(web.HTTPNotFound):
         await TransitView("gps").get(request, "entry", "missing")
+
+
+def test_departures_sensor_reports_warsaw_clock_times():
+    from custom_components.warsaw_transit.sensor import TransitSensor
+    schedule = [{"departure": "2026-11-06T13:39:00+01:00", "departure_local": "13:39", "line": "120", "headsign": "Olesin"},
+                {"departure": "2026-11-06T13:59:00+01:00", "departure_local": "13:59", "line": "120", "headsign": "Olesin"}]
+    coordinator = SimpleNamespace(data={"home_to_work": {"schedule": schedule, "gps": None, "status": "unknown", "error": None}}, last_update_success=True)
+    sensor = TransitSensor(coordinator, "entry", "home_to_work", "departures")
+    assert sensor.native_value == "13:39, 13:59"
+    assert sensor.device_class is None
+    assert sensor.extra_state_attributes["lines"] == ["120", "120"]
+    coordinator.data["home_to_work"]["schedule"] = []
+    assert sensor.native_value is None
