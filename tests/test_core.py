@@ -122,6 +122,7 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
         r = result['home_to_work']
         self.assertEqual(r['end_post'],'01')
         self.assertEqual([d['departure'] for d in r['schedule']],['2026-11-06T09:10:00+01:00','2026-11-06T09:30:00+01:00'])
+        self.assertEqual([d['departure_local'] for d in r['schedule']],['09:10','09:30'])
         self.assertIsNone(r['gps'])
         json.dumps(result)
         result = await engine.async_refresh(datetime(2026,11,6,9,20,tzinfo=WARSAW))

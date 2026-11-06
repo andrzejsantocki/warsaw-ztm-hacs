@@ -144,7 +144,7 @@ class TransitEngine:
                             continue
                         # A repeated autumn clock cannot identify a unique trip.
                         if dt.utcoffset() != dt.replace(fold=1).utcoffset(): continue
-                        event = {'departure':dt.isoformat(), 'line':line, 'brigade':departure.brigade, 'headsign':departure.direction}
+                        event = {'departure':dt.isoformat(), 'departure_local':dt.strftime('%H:%M'), 'line':line, 'brigade':departure.brigade, 'headsign':departure.direction}
                         if -600 <= (dt-now).total_seconds() <= 1800:
                             candidate_events.append(event)
                         if dt >= now:

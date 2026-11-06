@@ -6,7 +6,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from .api import TransitClient, TransitError, AuthError, CooldownError, ConfigurationError
-from .engine import TransitEngine
+from .engine import TransitEngine, WARSAW
 from .models import RouteConfig
 from .const import DOMAIN, UPDATE_SECONDS
 
@@ -55,7 +55,7 @@ class TransitCoordinator(DataUpdateCoordinator):
                 await self.engine.async_setup()
                 self._initialized = True
             data = await self.engine.async_refresh()
-            self.last_success = datetime.now(timezone.utc).isoformat()
+            self.last_success = datetime.now(WARSAW).isoformat()
             return data
         except AuthError as err:
             raise ConfigEntryAuthFailed("API key rejected. Reauthenticate with a current Warsaw Open Data key.") from err

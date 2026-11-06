@@ -81,7 +81,8 @@ class TransitSensor(CoordinatorEntity, SensorEntity):
         if schedule and schedule[0].get("line"):
             first = schedule[0]
             return {"line": first["line"], "source": "schedule", "vehicle_id": None, "brigade": first.get("brigade"),
-                    "headsign": first.get("headsign"), "departure": first.get("departure")}
+                    "headsign": first.get("headsign"), "departure": first.get("departure"),
+                    "departure_local": first.get("departure_local")}
         return {"line": None, "source": None, "vehicle_id": None}
 
 
