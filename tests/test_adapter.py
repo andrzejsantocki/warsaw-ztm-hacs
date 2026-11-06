@@ -85,3 +85,10 @@ def test_departures_sensor_reports_warsaw_clock_times():
     assert sensor.extra_state_attributes["lines"] == ["120", "120"]
     coordinator.data["home_to_work"]["schedule"] = []
     assert sensor.native_value is None
+
+
+def test_entity_ids_keep_warsaw_transit_prefix():
+    from custom_components.warsaw_transit.sensor import TransitSensor, LastErrorSensor
+    coordinator = SimpleNamespace(data={}, last_update_success=True)
+    assert TransitSensor(coordinator, "entry", "home_to_work", "departures").entity_id == "sensor.warsaw_transit_home_to_work_departures"
+    assert LastErrorSensor(coordinator, "entry").entity_id == "sensor.warsaw_transit_last_error"

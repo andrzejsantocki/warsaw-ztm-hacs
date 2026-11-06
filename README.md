@@ -1,123 +1,184 @@
 # Warsaw ZTM Bus Commute
 
-🇵🇱 [Po polsku ↓](#po-polsku)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
+[![GitHub release](https://img.shields.io/github/v/release/andrzejsantocki/warsaw-ztm-hacs)](https://github.com/andrzejsantocki/warsaw-ztm-hacs/releases)
+[![Validate](https://github.com/andrzejsantocki/warsaw-ztm-hacs/actions/workflows/validate.yml/badge.svg)](https://github.com/andrzejsantocki/warsaw-ztm-hacs/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Home Assistant custom integration with 1 to 4 configurable, named bus journeys. No bus line or vehicle is hardcoded. Discover lines shared by the configured stop posts and use forward timetable matches.
+Home Assistant integration for your daily Warsaw bus journeys. It shows the next timetable departures and the live position of the bus that is approaching your stop, using the official [Warsaw Open Data](https://dane.um.warszawa.pl) API.
 
-## Status
+🇵🇱 [Wersja polska ↓](#po-polsku)
 
-Version 0.1.5 development build, installable via HACS as a custom repository. Verified against Home Assistant 2025.1.4 / Python 3.12: 44 tests and 17 subtests passed (9 third-party warnings). Real HA HTTP authentication tests cover 401, 200, 404 and stale-cache 503 responses. Live Warsaw API checks returned both routes' schedules and estimated GPS candidates. GPS direction remains heuristic, not guaranteed.
+## Features
+
+- **1 to 4 journeys**, e.g. home → work and work → home.
+- **Automatic line discovery.** Enter two stops; the integration finds every direct bus line that runs between them in the right direction.
+- **Next two departures** per journey, as timestamps and as plain Warsaw time.
+- **Approaching bus** from live GPS: vehicle number, line, position and distance to your stop.
+- **Voice-assistant friendly** text sensor with departures in local time.
+- **Polish time handled correctly**, including summer/winter time changes (`Europe/Warsaw`).
+- **Gentle on the API**: one shared poll every 20 s, timetables cached for 15 min, automatic back-off on errors.
+
+## Requirements
+
+- Home Assistant 2025.1 or newer (2026.3+ shows the integration icon).
+- A free Warsaw Open Data API key: [dane.um.warszawa.pl → API key](https://dane.um.warszawa.pl/en/key-api).
 
 ## Installation
 
 ### HACS (recommended)
 
-1. HACS → ⋮ → Custom repositories → add `https://github.com/andrzejsantocki/warsaw-ztm-hacs`, type **Integration**.
-2. Search for **Warsaw ZTM Bus Commute** in HACS and download it.
-3. Restart Home Assistant, then Settings → Devices & services → Add integration → Warsaw ZTM Bus Commute.
+1. In HACS, open **⋮ → Custom repositories**, add `https://github.com/andrzejsantocki/warsaw-ztm-hacs` with type **Integration**.
+2. Search for **Warsaw ZTM Bus Commute** and download it.
+3. Restart Home Assistant.
 
 ### Manual
 
-Copy `custom_components/warsaw_transit` into your HA `/config/custom_components/` directory, restart HA, then add the integration as above.
+Copy `custom_components/warsaw_transit` into `/config/custom_components/` and restart Home Assistant.
 
 ## Configuration
 
-Generate a raw JWT at https://dane.um.warszawa.pl/en/key-api. Enter it in the integration's password field. Set 1 to 4 journeys. Journey 1 is required; leave both stop fields of a journey empty to skip it. Each journey has:
+Go to **Settings → Devices & services → Add integration → Warsaw ZTM Bus Commute** and fill in:
 
-- `name`: unique machine-friendly name, defaults `home_to_work` / `work_to_home` for journeys 1 and 2 and `route_N` when left empty.
-- `start_stop`: exact Warsaw stop name.
-- `end_stop`: exact destination stop name.
-- `start_post`, `end_post`: optional two-digit stop post numbers. Required when a name resolves to multiple compatible posts. Separate journeys may use different posts for the same stop group.
+| Field | Required | Description |
+|---|---|---|
+| API key | yes | Your Warsaw Open Data key. |
+| Name | no | Unique ID for the journey: lowercase letters, digits, `_`. Defaults to `home_to_work`, `work_to_home`, `route_3`, `route_4`. |
+| Start stop / Destination stop | yes | Exact stop names as used by ZTM, e.g. `Dworzec Wileński`. |
+| Start post / Destination post | no | Two-digit post (słupek) number, e.g. `01`. Needed only when a stop has several matching posts; the form tells you which ones. |
 
-Example configuration (not embedded in the integration logic):
+Journey 1 is required. Journeys 2–4 are optional; leave both stop fields empty to skip one. Change journeys later with **⋮ → Reconfigure** on the integration.
 
-- `home_to_work`: Dworzec Wileński **01** → Centrum **02**.
-- `work_to_home`: Centrum **03** → Dworzec Wileński **02**.
+Example:
 
-Both metro stop names have multiple posts. The integration reports ambiguous names rather than silently choosing one. Only direct bus journeys are supported; no walking legs or transfers.
+| Journey | From | To |
+|---|---|---|
+| `home_to_work` | Dworzec Wileński, post 01 | Centrum, post 02 |
+| `work_to_home` | Centrum, post 03 | Dworzec Wileński, post 02 |
 
-## Sensors
+## Entities
 
-Each route creates two scheduled-departure timestamp sensors (`next_1`, `next_2`; their `departure_local` attribute gives the Warsaw time as `HH:MM`), a `departures` text sensor with both times in Warsaw time (e.g. `13:39, 13:59`) and an approaching-vehicle sensor. HA always shows timestamp states in UTC (`12:39:00+00:00`), so expose the `departures` sensor, not `next_1`/`next_2`, to voice assistants and LLM conversation agents; otherwise they may read UTC as local time. A `line` sensor shows the approaching bus's line (attributes `vehicle_id`, `brigade`, `source: gps`), falling back to the next scheduled departure's line (`source: schedule`) when no bus is tracked. A diagnostic `last error` sensor holds the time of the latest failed update, with `error_type`, `message`, `traceback` (API key redacted, not stored by the recorder), `error_count` and `currently_failing` attributes. It resets on restart. GPS attributes include vehicle ID, line, brigade, latitude, longitude, last report time and `distance_km`.
+For every journey (`<journey>` is its name):
 
-Distance is haversine great-circle distance from bus to origin stop. No maps, geocoding service or routing dependency is used. Timetable departure is **not** a GPS ETA.
+| Entity | State | Useful attributes |
+|---|---|---|
+| `sensor.warsaw_transit_<journey>_next_1` | Next departure (timestamp) | `departure_local`, `line`, `brigade`, `headsign` |
+| `sensor.warsaw_transit_<journey>_next_2` | Departure after that (timestamp) | same as above |
+| `sensor.warsaw_transit_<journey>_departures` | Both times as text, e.g. `13:39, 13:59` | `lines`, `headsigns` |
+| `sensor.warsaw_transit_<journey>_approaching_bus` | Vehicle number of the approaching bus | `line`, `latitude`, `longitude`, `distance_km`, `gps_updated` |
+| `sensor.warsaw_transit_<journey>_line` | Line of the approaching bus, or of the next departure | `source` (`gps` / `schedule`), `vehicle_id` |
 
-GPS provides an **estimated approaching candidate, never verified journey direction**. It chooses the closest straight-line-distance vehicle with one matching line/brigade forward timetable departure in the next 30 minutes (or up to 10 minutes late), two fresh observations 5–120 seconds apart, at least 15 metres decreasing distance to the boarding stop, plausible movement below 130 km/h, and distance below 10 km. Multiple eligible trips for the same line/brigade are rejected. No endpoint-vector corridor is assumed.
+Plus one diagnostic sensor, `sensor.warsaw_transit_last_error`, with the time and details of the latest failed update.
 
-Candidate results have `status` and GPS `direction` set to `approaching_candidate`, `certainty: estimated_schedule_and_motion`, `uncertainty_reason: direction_estimated_without_trip_id`, and an explicit GPS warning. **Direction is not guaranteed without a trip feed**: an opposite-direction or already-passed bus can move closer again on a curved route. Increasing distance rejects the current candidate, not every possible previously passed journey. No candidate yields `gps: null`, `status: unknown`, and `uncertainty_reason: no_unambiguous_fresh_schedule_and_motion_candidate`; it does **not** mean no bus is coming. Sensor attributes expose uncertainty; failed refreshes expose `update_failed` rather than stale candidate details. See [core limitations](CORE_LIMITATIONS.md).
+> **Times in Developer Tools look one or two hours off?** Home Assistant always stores timestamp states in UTC (`12:39:00+00:00` = 13:39 in Warsaw). Dashboards convert them automatically. In templates, use `departure_local` or `| as_local`.
 
-Timetables are shared between setup and refreshes, cached for 15 minutes and invalidated when the Warsaw calendar date changes. One available future departure is retained; two is the maximum. Partial stop/GPS feeds skip invalid rows with warning counts; wholly unusable nonempty feeds fail safely.
+### Voice assistants and LLM agents
 
-## Separate bot APIs
+Expose the `…_departures` sensors to Assist or your conversation agent, **not** `next_1`/`next_2`. Agents tend to read UTC timestamp states as local time and give wrong answers.
 
-Use the Home Assistant base URL, config entry ID and configured route name:
+### Dashboard example
 
+```yaml
+type: entities
+title: Bus to work
+entities:
+  - entity: sensor.warsaw_transit_home_to_work_next_1
+    name: Next bus
+    format: relative
+  - entity: sensor.warsaw_transit_home_to_work_next_2
+    name: Then
+    format: time
+  - entity: sensor.warsaw_transit_home_to_work_line
+    name: Line
+  - type: attribute
+    entity: sensor.warsaw_transit_home_to_work_approaching_bus
+    attribute: distance_km
+    name: Approaching bus (km)
 ```
-GET /api/warsaw_transit/ENTRY_ID/home_to_work/schedule
-GET /api/warsaw_transit/ENTRY_ID/home_to_work/gps
-```
 
-Authenticate with the bot's **Home Assistant access token**, not the Warsaw key:
+## How it works and limitations
+
+- Departure times are **timetable times**, not live arrival predictions.
+- The approaching bus is an **estimate**: a vehicle is picked when its line and brigade match an upcoming departure and it is moving towards your stop. The public feed has no trip IDs, so direction cannot be guaranteed. An `unknown` state means no confident match, not that no bus is coming.
+- Only **direct bus journeys** are supported (no trams, transfers or walking legs).
+- Times around midnight and the night of the October clock change rely on heuristics, because the API has no service-date parameter.
+
+Full details: [CORE_LIMITATIONS.md](CORE_LIMITATIONS.md).
+
+## Local REST API
+
+For bots and scripts, the integration serves its cached data (it never triggers extra Warsaw API calls). Authenticate with a Home Assistant long-lived access token:
 
 ```bash
 curl -H "Authorization: Bearer $HA_TOKEN" \
-  "$HA_URL/api/warsaw_transit/$ENTRY_ID/home_to_work/schedule"
+  "$HA_URL/api/warsaw_transit/$ENTRY_ID/home_to_work/schedule"   # or /gps
 ```
 
-These resources return the coordinator's cached results and never trigger upstream requests. The config entry ID is visible in HA integration URLs and in the integration's sensor unique IDs. Route names must match your configuration.
+`ENTRY_ID` is shown in the integration's URL under Settings → Devices & services.
 
-## Errors and rate control
+## Troubleshooting
 
-A single coordinator shares GPS polling across the route sensors. Requests are serialized; failures activate exponential cooldown, and HTTP Retry-After is honored. Authorization errors require reauthentication. Configuration errors identify the incorrect or ambiguous stop/post rather than hammering the API.
+| Problem | Fix |
+|---|---|
+| "Ambiguous origin/destination" | Set the post number the message suggests. |
+| "No forward shared routes" | No direct bus runs between those stops in that direction today. Check names and posts. |
+| API key rejected | Generate a new key and use **Reconfigure**. |
+| Sensors `unavailable` | See the attributes of `sensor.warsaw_transit_last_error`. |
 
-## Key storage
+## Development
 
-The supplied development key is stored only in local `.env`, mode 0600, excluded by `.gitignore`. `.env.example` contains no credential. Never publish or distribute `.env`.
-
-Home Assistant does **not** automatically load this project's `.env`: enter the key in its config flow. HA stores integration credentials in its own configuration storage; protect backups accordingly.
-
-## Standalone live check
-
-```
-.venv/bin/python live_check.py routes.example.json
-```
-
-It reads the private `.env` and requests two GPS samples at least 20 seconds apart. `inspect_route.py` is a development utility for inspecting post candidates. It is not required by HA.
-
-## Tests
-
-```
-.venv/bin/python -m unittest discover -s tests -p test_core.py -v
-.ha312-venv/bin/python -m pytest tests -q -o asyncio_default_fixture_loop_scope=function
+```bash
+python -m pytest tests -q -o asyncio_default_fixture_loop_scope=function
 ```
 
-No live API responses are fabricated. Unit tests use synthetic fixtures; live-check output comes from the actual Warsaw endpoint.
+Tests run against real Home Assistant modules with synthetic API fixtures. `live_check.py` queries the live API using a key from a local `.env` (never committed). Hassfest and HACS validation run on every push.
+
+## License
+
+[MIT](LICENSE). Data © Miasto Stołeczne Warszawa, [Warsaw Open Data](https://dane.um.warszawa.pl). This project is not affiliated with ZTM Warszawa.
+
+---
 
 ## Po polsku
 
-Integracja Home Assistant pokazująca autobusy ZTM Warszawa na Twoich codziennych trasach: najbliższe odjazdy z rozkładu i autobus, który właśnie się zbliża (GPS). Linie wykrywane są automatycznie, nic nie jest wpisane na sztywno.
+Integracja Home Assistant dla codziennych dojazdów autobusami ZTM w Warszawie: najbliższe odjazdy z rozkładu oraz autobus, który właśnie zbliża się do Twojego przystanku (GPS). Dane pochodzą z oficjalnego API [Otwarte dane po warszawsku](https://dane.um.warszawa.pl).
 
-### Instalacja (HACS)
+### Funkcje
 
-1. HACS → ⋮ → Niestandardowe repozytoria → dodaj `https://github.com/andrzejsantocki/warsaw-ztm-hacs`, typ **Integration**.
+- Od 1 do 4 tras, np. dom → praca i praca → dom.
+- Linie wykrywane automatycznie: wystarczy podać dwa przystanki.
+- Dwa najbliższe odjazdy dla każdej trasy.
+- Zbliżający się autobus z GPS: numer pojazdu, linia, położenie i odległość.
+- Poprawny czas polski, również przy zmianie czasu letniego i zimowego.
+
+### Instalacja
+
+1. HACS → **⋮ → Niestandardowe repozytoria** → dodaj `https://github.com/andrzejsantocki/warsaw-ztm-hacs`, typ **Integration**.
 2. Wyszukaj **Warsaw ZTM Bus Commute** i pobierz.
-3. Zrestartuj Home Assistant, potem Ustawienia → Urządzenia i usługi → Dodaj integrację → Warsaw ZTM Bus Commute.
+3. Zrestartuj Home Assistant.
+4. **Ustawienia → Urządzenia i usługi → Dodaj integrację → Warsaw ZTM Bus Commute.**
+
+Potrzebny jest bezpłatny klucz API ze strony [dane.um.warszawa.pl](https://dane.um.warszawa.pl/en/key-api).
 
 ### Konfiguracja
 
-Klucz API wygenerujesz na https://dane.um.warszawa.pl (Klucz API). Skonfiguruj od 1 do 4 tras; trasa 1 jest wymagana, pozostałe zostaw puste, jeśli ich nie potrzebujesz. Dla każdej trasy podaj:
+- **Nazwa**: unikalna nazwa trasy (małe litery, cyfry, `_`), np. `dom_praca`.
+- **Przystanek początkowy i docelowy**: dokładne nazwy jak w ZTM.
+- **Słupek** (opcjonalnie): dwucyfrowy numer, np. `01`. Potrzebny tylko, gdy przystanek ma kilka pasujących słupków; formularz podpowie które.
 
-- `name`: unikalna nazwa (małe litery, cyfry, podkreślenia), np. `dom_praca`.
-- `start_stop`, `end_stop`: dokładne nazwy przystanków początkowego i docelowego.
-- `start_post`, `end_post`: opcjonalny dwucyfrowy numer słupka, np. `01`. Wymagany, gdy przystanek ma kilka pasujących słupków (integracja wtedy o tym poinformuje).
-
-Obsługiwane są tylko bezpośrednie połączenia autobusowe, bez przesiadek.
+Trasa 1 jest wymagana, trasy 2–4 są opcjonalne (zostaw oba przystanki puste, aby pominąć trasę).
 
 ### Czujniki
 
-Każda trasa ma czujniki `next_1` i `next_2` (najbliższe odjazdy z rozkładu; atrybut `departure_local` podaje godzinę czasu warszawskiego, np. `13:19`), `departures` (obie godziny czasu warszawskiego jako tekst, np. `13:39, 13:59`; ten czujnik udostępniaj asystentom głosowym i LLM), `approaching_bus` (numer pojazdu zbliżającego się autobusu) i `line` (jego linia). Czujnik `last error` pokazuje ostatni błąd aktualizacji.
+| Czujnik | Stan |
+|---|---|
+| `…_next_1`, `…_next_2` | Najbliższe odjazdy (znacznik czasu; atrybut `departure_local`, np. `13:39`) |
+| `…_departures` | Obie godziny jako tekst, np. `13:39, 13:59` |
+| `…_approaching_bus` | Numer zbliżającego się pojazdu |
+| `…_line` | Linia zbliżającego się autobusu lub najbliższego odjazdu |
 
-W Narzędziach deweloperskich stan czujników czasu jest pokazany w UTC, bo tak Home Assistant zapisuje znaczniki czasu. Na kartach i w automatyzacjach jest wyświetlany w Twojej strefie czasowej.
+W Narzędziach deweloperskich znaczniki czasu są pokazane w UTC (tak zapisuje je Home Assistant). Na kartach wyświetlają się w czasie lokalnym. **Asystentom głosowym i LLM udostępniaj czujnik `…_departures`**, a nie `next_1`/`next_2`.
 
-Kierunek jazdy z GPS jest **szacowany** (rozkład + ruch pojazdu), nie gwarantowany. Godzina odjazdu to czas z rozkładu, nie prognoza przyjazdu.
+### Ograniczenia
 
+Godziny odjazdu pochodzą z rozkładu, to nie jest prognoza przyjazdu. Kierunek jazdy z GPS jest szacowany, nie gwarantowany. Obsługiwane są tylko bezpośrednie połączenia autobusowe.

@@ -20,6 +20,8 @@ class TransitSensor(CoordinatorEntity, SensorEntity):
         self.route = route
         self.kind = kind
         self._attr_unique_id = f"{entry_id}_{route}_{kind}"
+        # Stable IDs regardless of the device's display name (only used for new entities).
+        self.entity_id = f"sensor.{DOMAIN}_{route}_{kind}"
         self._attr_name = f"{route.replace('_', ' ')} {kind.replace('_', ' ')}"
         self._attr_device_info = {"identifiers": {(DOMAIN, entry_id)}, "name": "Warsaw ZTM Bus Commute", "manufacturer": "City of Warsaw"}
         if kind.startswith("next_"):
@@ -110,6 +112,7 @@ class LastErrorSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, entry_id):
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry_id}_last_error"
+        self.entity_id = f"sensor.{DOMAIN}_last_error"
         self._attr_device_info = {"identifiers": {(DOMAIN, entry_id)}, "name": "Warsaw ZTM Bus Commute", "manufacturer": "City of Warsaw"}
 
     @property
