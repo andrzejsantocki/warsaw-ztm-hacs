@@ -1,21 +1,26 @@
-"""Two-route UI configuration and reconfiguration."""
+"""Journey (1 to MAX_ROUTES) UI configuration and reconfiguration."""
 import re
 import voluptuous as vol
 from pydantic import ValidationError
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
-from .const import DOMAIN, DEFAULT_NAMES
+from .const import DOMAIN, DEFAULT_NAMES, MAX_ROUTES
+
+
+FIELDS = ("name", "start_stop", "end_stop", "start_post", "end_post")
 
 
 def route_schema(data=None, user_input=None):
     data = data or {}
     fields = {vol.Required("api_key", default=data.get("api_key", "")): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))}
     routes = data.get("routes", [])
-    for i, name in enumerate(DEFAULT_NAMES, 1):
-        route = routes[i - 1] if len(routes) >= i else {"name": name}
-        for field in ("name", "start_stop", "end_stop", "start_post", "end_post"):
-            marker = vol.Optional if field.endswith("post") else vol.Required
+    for i in range(1, MAX_ROUTES + 1):
+        default_name = DEFAULT_NAMES[i - 1] if i <= len(DEFAULT_NAMES) and not data else ""
+        route = routes[i - 1] if len(routes) >= i else {"name": default_name}
+        for field in FIELDS:
+            # Only the first journey is mandatory; later slots are used when filled in.
+            marker = vol.Required if i == 1 and not field.endswith("post") else vol.Optional
             fields[marker(f"route_{i}_{field}", default=route.get(field) or "")] = str
     if user_input is not None:
         fields = {type(marker)(str(marker), default="" if str(marker) == "api_key" else user_input.get(str(marker), "")): selector for marker, selector in fields.items()}
@@ -27,16 +32,20 @@ def route_data(user_input):
     if not key:
         raise vol.Invalid("Enter your Warsaw Open Data API key")
     routes = []
-    for i in (1, 2):
-        route = {field: user_input.get(f"route_{i}_{field}", "").strip() for field in ("name", "start_stop", "end_stop", "start_post", "end_post")}
+    for i in range(1, MAX_ROUTES + 1):
+        route = {field: (user_input.get(f"route_{i}_{field}") or "").strip() for field in FIELDS}
+        # An unused slot has no stops; its prefilled name or posts are ignored.
+        if i > 1 and not route["start_stop"] and not route["end_stop"]:
+            continue
+        if not route["start_stop"] or not route["end_stop"]:
+            raise vol.Invalid(f"Journey {i}: enter both stop names, or leave both empty")
+        route["name"] = route["name"] or f"route_{i}"
         if not re.fullmatch(r"[a-z0-9_]+", route["name"]):
             raise vol.Invalid("Route names must use lowercase letters, digits and underscores")
-        if not route["start_stop"] or not route["end_stop"]:
-            raise vol.Invalid("Enter both stop names for each route")
         for field in ("start_post", "end_post"):
             route[field] = route[field] or None
         routes.append(route)
-    if routes[0]["name"] == routes[1]["name"]:
+    if len({route["name"] for route in routes}) != len(routes):
         raise vol.Invalid("Choose a different name for each route")
     return {"api_key": key, "routes": routes}
 

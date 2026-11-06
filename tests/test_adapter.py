@@ -7,12 +7,19 @@ import pytest
 from custom_components.warsaw_transit import TransitView
 
 
-def test_route_form_exactly_two_and_validation():
+def test_route_form_one_to_four_journeys_and_validation():
     from custom_components.warsaw_transit.config_flow import route_schema, route_data
     import voluptuous as vol
     schema = route_schema()
     raw = {"api_key": "secret", "route_1_name": "home_to_work", "route_1_start_stop": "A", "route_1_end_stop": "B", "route_2_name": "work_to_home", "route_2_start_stop": "B", "route_2_end_stop": "A"}
     assert len(route_data(schema(raw))["routes"]) == 2
+    # Route 2's prefilled name alone does not make the slot used.
+    one = {"api_key": "secret", "route_1_name": "solo", "route_1_start_stop": "A", "route_1_end_stop": "B", "route_2_name": "work_to_home"}
+    assert [r["name"] for r in route_data(schema(one))["routes"]] == ["solo"]
+    three = dict(raw, route_3_start_stop="C", route_3_end_stop="D")
+    assert [r["name"] for r in route_data(schema(three))["routes"]] == ["home_to_work", "work_to_home", "route_3"]
+    with pytest.raises(vol.Invalid, match="Journey 4"):
+        route_data(schema(dict(raw, route_4_start_stop="C")))
     raw["route_2_name"] = "home_to_work"
     with pytest.raises(vol.Invalid):
         route_data(schema(raw))

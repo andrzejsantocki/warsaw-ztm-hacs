@@ -276,8 +276,12 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
         api.tables[('2','02')] = []
         with self.assertRaisesRegex(ConfigurationError, 'forward'):
             await TransitEngine(api,self.routes()).async_setup()
-        with self.assertRaisesRegex(ConfigurationError, 'two'):
-            await TransitEngine(api,self.routes()[:1]).async_setup()
+        with self.assertRaisesRegex(ConfigurationError, '1 to 4'):
+            await TransitEngine(api,[]).async_setup()
+        with self.assertRaisesRegex(ConfigurationError, '1 to 4'):
+            await TransitEngine(api,self.routes()[:1]*2).async_setup()
+        with self.assertRaisesRegex(ConfigurationError, '1 to 4'):
+            await TransitEngine(api,self.routes()*3).async_setup()
 
 class CoreTests(unittest.TestCase):
     def test_clock_and_stop_resolution(self):

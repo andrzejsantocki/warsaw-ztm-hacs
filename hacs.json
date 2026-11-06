@@ -1,5 +1,8 @@
 {
   "name": "Warsaw ZTM Bus Commute",
   "homeassistant": "2025.1.0",
-  "render_readme": true
+  "render_readme": true,
+  "country": [
+    "PL"
+  ]
 }

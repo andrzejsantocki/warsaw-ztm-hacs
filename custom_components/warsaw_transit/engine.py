@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 import asyncio
 import math
 import time
+from .const import MAX_ROUTES
 from .models import ConfigurationError, RouteConfig
 
 WARSAW = ZoneInfo('Europe/Warsaw')
@@ -81,8 +82,8 @@ class TransitEngine:
         return self._tables[key][1]
 
     async def async_setup(self):
-        if len(self.routes) != 2 or len({r.name for r in self.routes}) != 2:
-            raise ConfigurationError('Configure exactly two routes with distinct names')
+        if not 1 <= len(self.routes) <= MAX_ROUTES or len({r.name for r in self.routes}) != len(self.routes):
+            raise ConfigurationError(f'Configure 1 to {MAX_ROUTES} routes with distinct names')
         stops = await self.client.stops()
         lines_cache = {}
         now = datetime.now(WARSAW)
