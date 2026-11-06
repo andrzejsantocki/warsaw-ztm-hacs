@@ -31,6 +31,26 @@ def test_sensor_timestamp_and_vehicle_attributes():
     assert bus.extra_state_attributes["status"] == "approaching"
 
 
+def test_line_sensor_prefers_gps_then_schedule():
+    from custom_components.warsaw_transit.sensor import TransitSensor
+    route = {"schedule": [{"departure": "2026-11-06T12:00:00+01:00", "line": "120", "brigade": "6", "headsign": "Olesin"}],
+             "gps": {"vehicle_id": "5428", "line": "120", "brigade": "6"}, "status": "approaching_candidate", "error": None}
+    coordinator = SimpleNamespace(data={"home_to_work": route}, last_update_success=True)
+    line = TransitSensor(coordinator, "entry", "home_to_work", "line")
+    assert line.native_value == "120"
+    assert line.extra_state_attributes["source"] == "gps"
+    assert line.extra_state_attributes["vehicle_id"] == "5428"
+    route["gps"] = None
+    assert line.native_value == "120"
+    assert line.extra_state_attributes["source"] == "schedule"
+    assert line.extra_state_attributes["vehicle_id"] is None
+    assert line.extra_state_attributes["headsign"] == "Olesin"
+    route["schedule"] = []
+    assert line.native_value is None
+    coordinator.last_update_success = False
+    assert line.native_value is None
+
+
 @pytest.mark.asyncio
 async def test_http_is_authenticated_and_only_reads_cache():
     from aiohttp import web
